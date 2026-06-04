@@ -158,6 +158,49 @@ const SPORTS = {
   },
 };
 
+/* ---- what's in season (US-centric, by month) ----
+ *
+ * Two things drive off this: which sport the page opens on, and which sport
+ * names get the red "in season" treatment. Months are 1-based. */
+
+// Months each sport is in season (regular season through finals).
+const IN_SEASON_MONTHS = {
+  nfl: [9, 10, 11, 12, 1, 2], // Sep kickoff → early-Feb Super Bowl
+  nba: [10, 11, 12, 1, 2, 3, 4, 5, 6], // Oct → June Finals
+  mlb: [4, 5, 6, 7, 8, 9, 10], // Apr → Oct World Series
+  nhl: [10, 11, 12, 1, 2, 3, 4, 5, 6], // Oct → June Stanley Cup
+  soccer: [8, 9, 10, 11, 12, 1, 2, 3, 4, 5], // big leagues Aug → May
+};
+
+// The marquee American sport to open on, per month — when several overlap,
+// pick the one most people are actually talking about that month.
+const DEFAULT_US_SPORT_BY_MONTH = {
+  1: "nfl", // playoffs
+  2: "nfl", // Super Bowl
+  3: "nba",
+  4: "mlb", // opening day
+  5: "nba", // playoffs
+  6: "nba", // Finals
+  7: "mlb", // All-Star
+  8: "mlb",
+  9: "nfl", // football's back
+  10: "nfl",
+  11: "nfl",
+  12: "nfl",
+};
+
+function currentMonth() {
+  return new Date().getMonth() + 1;
+}
+
+function isInSeason(key, month) {
+  return (IN_SEASON_MONTHS[key] || []).indexOf(month) !== -1;
+}
+
+function defaultSport(month) {
+  return DEFAULT_US_SPORT_BY_MONTH[month] || "nfl";
+}
+
 /* Deterministic per day so the site feels "updated daily" — same bluff for
  * everyone on a given date, a fresh one tomorrow. */
 function dailySeed(dateStr) {
@@ -337,11 +380,18 @@ function renderDaily() {
 }
 
 function init() {
+  // Open on whatever American sport is the marquee event this month.
+  const month = currentMonth();
+  currentSport = defaultSport(month);
+
   // Build the sport tabs.
   const tabs = document.getElementById("tabs");
   Object.keys(SPORTS).forEach((key) => {
     const btn = document.createElement("button");
-    btn.className = "tab" + (key === currentSport ? " active" : "");
+    btn.className =
+      "tab" +
+      (key === currentSport ? " active" : "") +
+      (isInSeason(key, month) ? " in-season" : "");
     btn.dataset.sport = key;
     btn.innerHTML = SPORTS[key].emoji + " " + SPORTS[key].label;
     btn.addEventListener("click", () => {

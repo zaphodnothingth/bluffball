@@ -1,6 +1,7 @@
 :root {
   --green: #1b8a3f;
   --green-dark: #12692f;
+  --red: #c81e1e;
   --pitch: #f4f7f2;
   --ink: #16261a;
   --muted: #5d6b60;
@@ -124,10 +125,27 @@ body {
   border-color: var(--green);
 }
 
+/* Red name = in season right now. The active (selected) tab stays
+   white-on-green, so only un-selected in-season tabs go red. */
+.tab.in-season:not(.active) {
+  color: var(--red);
+}
+
 .tab.active {
   background: var(--green);
   border-color: var(--green);
   color: #fff;
+}
+
+.season-key {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.season-dot {
+  color: var(--red);
 }
 
 /* today block */

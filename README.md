@@ -27,6 +27,12 @@ soccer-only. Pick your sport:
 Pure static site — HTML, CSS, one vanilla JS file. No build step, no
 dependencies.
 
+- **Real results.** When games have actually been played, the follow-up line
+  grafts a true fact (who beat whom, the score) onto the vague analysis —
+  pulled live from ESPN's public scoreboard JSON (no API key, no backend, runs
+  right in the browser). A small `• real result` badge shows when it's real.
+  In the offseason, or if the fetch fails, it falls back to the canned lines —
+  never a broken card.
 - **Today's bluff** is seeded by the date, so it's the same for everyone on a
   given day and refreshes tomorrow — honoring the show's "updated daily" gag.
 - **Give me another** rolls a fresh random combo.

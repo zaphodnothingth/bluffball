@@ -184,9 +184,108 @@ function buildBluff(sportKey, seed) {
   };
 }
 
+/* ---- real games (ESPN public scoreboard JSON — no key, CORS open) ----
+ *
+ * We keep the iconic generic opener, and graft a TRUE fact (who beat whom, the
+ * score) onto the front of the vague analysis line. Fact + waffle = a bluff
+ * that survives an informed nod. If there are no games (offseason) or the
+ * fetch fails, we silently keep the canned line. */
+
+const ESPN_PATHS = {
+  nfl: ["football/nfl"],
+  nba: ["basketball/nba"],
+  mlb: ["baseball/mlb"],
+  nhl: ["hockey/nhl"],
+  // Try a few big leagues; first one with finished games wins.
+  soccer: ["soccer/eng.1", "soccer/usa.1", "soccer/esp.1", "soccer/ger.1"],
+};
+
+const gamesCache = {}; // sportKey -> array of parsed completed games (per session)
+
+function yesterdayYMD() {
+  const d = new Date(Date.now() - 86400000);
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return "" + d.getFullYear() + m + day;
+}
+
+function parseEvent(e) {
+  const comp = e.competitions && e.competitions[0];
+  if (!comp) return null;
+  const done =
+    (e.status && e.status.type && e.status.type.completed === true) ||
+    (e.status && e.status.type && e.status.type.state === "post");
+  if (!done) return null;
+  const cs = comp.competitors || [];
+  const home = cs.find((c) => c.homeAway === "home");
+  const away = cs.find((c) => c.homeAway === "away");
+  if (!home || !away) return null;
+  const hs = parseInt(home.score, 10);
+  const as = parseInt(away.score, 10);
+  if (isNaN(hs) || isNaN(as)) return null;
+  const nm = (t) =>
+    (t.team &&
+      (t.team.shortDisplayName || t.team.displayName || t.team.name)) ||
+    "the other lot";
+  return { home: nm(home), away: nm(away), hs: hs, as: as };
+}
+
+async function fetchScoreboard(path) {
+  const base =
+    "https://site.api.espn.com/apis/site/v2/sports/" + path + "/scoreboard";
+  // Yesterday first (for that "last night" feel), then today's slate.
+  const urls = [base + "?dates=" + yesterdayYMD(), base];
+  const out = [];
+  for (const url of urls) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      const d = await r.json();
+      (d.events || []).forEach((ev) => out.push(ev));
+    } catch (e) {
+      /* network hiccup — try the next url */
+    }
+  }
+  return out;
+}
+
+async function getCompletedGames(sportKey) {
+  if (gamesCache[sportKey]) return gamesCache[sportKey];
+  const paths = ESPN_PATHS[sportKey] || [];
+  let games = [];
+  for (const p of paths) {
+    const events = await fetchScoreboard(p);
+    games = events.map(parseEvent).filter(Boolean);
+    if (games.length) break; // good enough from the first league with results
+  }
+  gamesCache[sportKey] = games;
+  return games;
+}
+
+function realResultSentence(sportKey, g) {
+  if (g.hs === g.as) {
+    return g.home + " and " + g.away + " played out a " + g.hs + "–" + g.as +
+      " draw.";
+  }
+  const homeWon = g.hs > g.as;
+  const winner = homeWon ? g.home : g.away;
+  const loser = homeWon ? g.away : g.home;
+  const ws = homeWon ? g.hs : g.as;
+  const ls = homeWon ? g.as : g.hs;
+  // US sports take "the" before the nickname; soccer clubs don't.
+  const the = sportKey === "soccer" ? "" : "the ";
+  return winner + " beat " + the + loser + " " + ws + "–" + ls + ".";
+}
+
 /* ---- wiring ---- */
 
 let currentSport = "soccer";
+let renderToken = 0; // guards against a slow fetch landing after a sport switch
+
+function setText(id, txt) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = txt;
+}
 
 function todayString() {
   const d = new Date();
@@ -194,15 +293,43 @@ function todayString() {
 }
 
 function render(seed) {
-  const b = buildBluff(currentSport, seed);
-  document.getElementById("opener").textContent = b.opener;
-  document.getElementById("line").textContent = b.line;
-  document.getElementById("closer").textContent = b.closer;
-  document.getElementById("panic-line").textContent = b.panic;
+  const token = ++renderToken;
+  const sportKey = currentSport;
+  const s = SPORTS[sportKey];
+  const b = buildBluff(sportKey, seed);
 
-  const s = SPORTS[currentSport];
-  document.getElementById("sport-emoji").textContent = s.emoji;
-  document.getElementById("sport-note").textContent = s.note;
+  setText("opener", b.opener);
+  setText("line", b.line);
+  setText("closer", b.closer);
+  setText("panic-line", b.panic);
+  setText("sport-emoji", s.emoji);
+  setText("sport-note", s.note);
+  document.getElementById("real-badge").classList.add("hidden");
+
+  enrichWithRealGame(sportKey, seed, token);
+}
+
+// Try to replace the vague line with "<real result>. <vague line>".
+async function enrichWithRealGame(sportKey, seed, token) {
+  try {
+    const games = await getCompletedGames(sportKey);
+    if (token !== renderToken) return; // user switched sport/rolled again
+    if (!games || !games.length) return; // offseason / none → keep canned line
+    const g = games[Math.abs(seed) % games.length];
+    const fact = realResultSentence(sportKey, g);
+    if (!fact) return;
+    // Avoid canned lines that name a specific team (e.g. the Arsenal one) —
+    // they'd contradict the real matchup we just stated.
+    let vague = buildBluff(sportKey, seed).line;
+    if (/Arsenal/.test(vague)) {
+      const pool = SPORTS[sportKey].lines.filter((l) => !/Arsenal/.test(l));
+      vague = pool[Math.abs(seed) % pool.length];
+    }
+    setText("line", fact + " " + vague);
+    document.getElementById("real-badge").classList.remove("hidden");
+  } catch (e) {
+    /* keep the canned line — never show a broken card */
+  }
 }
 
 function renderDaily() {

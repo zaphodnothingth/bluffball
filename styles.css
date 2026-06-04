@@ -269,6 +269,14 @@ body {
   font-weight: 700;
 }
 
+.real-badge {
+  display: inline-block;
+  margin-left: 6px;
+  color: #b00020;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
 .hidden {
   display: none;
 }

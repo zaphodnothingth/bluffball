@@ -33,6 +33,11 @@ dependencies.
   right in the browser). A small `• real result` badge shows when it's real.
   In the offseason, or if the fetch fails, it falls back to the canned lines —
   never a broken card.
+- **Opens on what's on.** In-season detection comes from ESPN's real
+  season windows (not a hardcoded calendar), and the page opens on the
+  in-season sport with a game today — preferring a playoffs/finals (ESPN
+  "Postseason"). In-season sport names show in red. Falls back to a month-based
+  guess if the feed is unavailable.
 - **Today's bluff** is seeded by the date, so it's the same for everyone on a
   given day and refreshes tomorrow — honoring the show's "updated daily" gag.
 - **Give me another** rolls a fresh random combo.

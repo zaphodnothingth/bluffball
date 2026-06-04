@@ -239,11 +239,9 @@ const ESPN_PATHS = {
   nba: ["basketball/nba"],
   mlb: ["baseball/mlb"],
   nhl: ["hockey/nhl"],
-  // Try a few big leagues; first one with finished games wins.
-  soccer: ["soccer/eng.1", "soccer/usa.1", "soccer/esp.1", "soccer/ger.1"],
+  // MLS first (year-round, US audience), then EPL/La Liga as cover.
+  soccer: ["soccer/usa.1", "soccer/eng.1", "soccer/esp.1"],
 };
-
-const gamesCache = {}; // sportKey -> array of parsed completed games (per session)
 
 function yesterdayYMD() {
   const d = new Date(Date.now() - 86400000);
@@ -273,36 +271,118 @@ function parseEvent(e) {
   return { home: nm(home), away: nm(away), hs: hs, as: as };
 }
 
-async function fetchScoreboard(path) {
-  const base =
-    "https://site.api.espn.com/apis/site/v2/sports/" + path + "/scoreboard";
-  // Yesterday first (for that "last night" feel), then today's slate.
-  const urls = [base + "?dates=" + yesterdayYMD(), base];
-  const out = [];
-  for (const url of urls) {
-    try {
-      const r = await fetch(url);
-      if (!r.ok) continue;
-      const d = await r.json();
-      (d.events || []).forEach((ev) => out.push(ev));
-    } catch (e) {
-      /* network hiccup — try the next url */
-    }
-  }
-  return out;
+// ESPN sometimes omits seconds ("2026-07-01T06:59Z"); normalize before Date().
+function parseISO(s) {
+  if (!s) return null;
+  const t = s.replace(/T(\d\d:\d\d)Z$/, "T$1:00Z");
+  const d = new Date(t);
+  return isNaN(d.getTime()) ? null : d;
 }
 
-async function getCompletedGames(sportKey) {
-  if (gamesCache[sportKey]) return gamesCache[sportKey];
+// Is "now" inside the league's real season window? This is the authoritative,
+// self-updating in-season signal — no hardcoded calendar, no stored schedules.
+function seasonInWindow(scoreboard) {
+  const se =
+    scoreboard &&
+    scoreboard.leagues &&
+    scoreboard.leagues[0] &&
+    scoreboard.leagues[0].season;
+  if (!se) return false;
+  const start = parseISO(se.startDate);
+  const end = parseISO(se.endDate);
+  if (!start || !end) return false;
+  const now = new Date();
+  return now >= start && now <= end;
+}
+
+function seasonType(scoreboard) {
+  const se =
+    scoreboard &&
+    scoreboard.leagues &&
+    scoreboard.leagues[0] &&
+    scoreboard.leagues[0].season;
+  return (se && se.type && se.type.name) || "";
+}
+
+// Cache raw responses per (path, date) so status + games share one fetch.
+const rawCache = {};
+async function rawScoreboard(path, dateParam) {
+  const key = path + "|" + (dateParam || "today");
+  if (key in rawCache) return rawCache[key];
+  const base =
+    "https://site.api.espn.com/apis/site/v2/sports/" + path + "/scoreboard";
+  const url = dateParam ? base + "?dates=" + dateParam : base;
+  try {
+    const r = await fetch(url);
+    rawCache[key] = r.ok ? await r.json() : null;
+  } catch (e) {
+    rawCache[key] = null;
+  }
+  return rawCache[key];
+}
+
+// Per-sport status + recent games, derived from ESPN. We cache the *promise*
+// so concurrent callers dedupe to a single in-flight fetch.
+const sportDataCache = {};
+function getSportData(sportKey) {
+  if (!sportDataCache[sportKey]) {
+    sportDataCache[sportKey] = loadSportData(sportKey);
+  }
+  return sportDataCache[sportKey];
+}
+
+async function loadSportData(sportKey) {
   const paths = ESPN_PATHS[sportKey] || [];
+  let inSeason = false;
+  let isPostseason = false;
+  let hasGameToday = false;
   let games = [];
   for (const p of paths) {
-    const events = await fetchScoreboard(p);
-    games = events.map(parseEvent).filter(Boolean);
-    if (games.length) break; // good enough from the first league with results
+    const today = await rawScoreboard(p);
+    const yest = await rawScoreboard(p, yesterdayYMD());
+    if (today) {
+      if (seasonInWindow(today)) inSeason = true;
+      if (/post/i.test(seasonType(today))) isPostseason = true;
+      if ((today.events || []).length) hasGameToday = true;
+    }
+    const evs = [].concat(
+      (today && today.events) || [],
+      (yest && yest.events) || []
+    );
+    const g = evs.map(parseEvent).filter(Boolean);
+    if (g.length && !games.length) games = g;
+    // Single-league sports are done after one path; soccer ORs across leagues.
+    if (sportKey !== "soccer") break;
+    if (inSeason && games.length) break; // soccer: stop once satisfied
   }
-  gamesCache[sportKey] = games;
-  return games;
+  return { inSeason: inSeason, isPostseason: isPostseason, hasGameToday: hasGameToday, games: games };
+}
+
+// Choose the sport to feature: an in-season sport with a game today wins, and
+// among those, a playoffs/finals (ESPN "Postseason") sport wins. Falls back to
+// the month-map default when live data is unavailable (offline / fetch fail).
+const TIEBREAK_ORDER = ["nfl", "nba", "nhl", "mlb", "soccer"];
+function pickDefaultSport(status) {
+  function score(k) {
+    const s = status[k] || {};
+    if (!s.inSeason) return 0;
+    let v = s.hasGameToday ? 100 : 20;
+    if (s.isPostseason) v += 50;
+    return v;
+  }
+  let best = null;
+  let bestScore = 0;
+  let bestIdx = 99;
+  Object.keys(SPORTS).forEach((k) => {
+    const v = score(k);
+    const idx = TIEBREAK_ORDER.indexOf(k);
+    if (v > bestScore || (v === bestScore && v > 0 && idx < bestIdx)) {
+      best = k;
+      bestScore = v;
+      bestIdx = idx;
+    }
+  });
+  return best; // null when nothing is in season → caller uses month-map
 }
 
 function realResultSentence(sportKey, g) {
@@ -324,6 +404,7 @@ function realResultSentence(sportKey, g) {
 
 let currentSport = "soccer";
 let renderToken = 0; // guards against a slow fetch landing after a sport switch
+let userPicked = false; // true once the user clicks a tab — stops auto-switching
 
 function setText(id, txt) {
   const el = document.getElementById(id);
@@ -355,7 +436,8 @@ function render(seed) {
 // Try to replace the vague line with "<real result>. <vague line>".
 async function enrichWithRealGame(sportKey, seed, token) {
   try {
-    const games = await getCompletedGames(sportKey);
+    const data = await getSportData(sportKey);
+    const games = data && data.games;
     if (token !== renderToken) return; // user switched sport/rolled again
     if (!games || !games.length) return; // offseason / none → keep canned line
     const g = games[Math.abs(seed) % games.length];
@@ -395,6 +477,7 @@ function init() {
     btn.dataset.sport = key;
     btn.innerHTML = SPORTS[key].emoji + " " + SPORTS[key].label;
     btn.addEventListener("click", () => {
+      userPicked = true;
       currentSport = key;
       document
         .querySelectorAll(".tab")
@@ -420,7 +503,44 @@ function init() {
     { weekday: "long", year: "numeric", month: "long", day: "numeric" }
   );
 
+  // Instant render using the month-map placeholder, then upgrade from real
+  // schedules once they load.
   renderDaily();
+  upgradeFromLiveData();
+}
+
+// Replace the month-map guesses with real ESPN season data: accurate red
+// "in season" flags, and (if the user hasn't picked yet) open on the sport
+// that's actually on today. Fails soft — on any error the month-map stands.
+async function upgradeFromLiveData() {
+  let status;
+  try {
+    const keys = Object.keys(SPORTS);
+    const entries = await Promise.all(
+      keys.map((k) => getSportData(k).then((d) => [k, d]))
+    );
+    status = {};
+    entries.forEach((e) => (status[e[0]] = e[1]));
+  } catch (e) {
+    return; // keep the month-map placeholder
+  }
+
+  // 1) Accurate in-season colouring (recolour only — never jarring).
+  Object.keys(SPORTS).forEach((k) => {
+    const tab = document.querySelector('.tab[data-sport="' + k + '"]');
+    if (tab) tab.classList.toggle("in-season", !!(status[k] && status[k].inSeason));
+  });
+
+  // 2) Feature the sport that's actually on today (unless the user has chosen).
+  if (userPicked) return;
+  const best = pickDefaultSport(status);
+  if (best && best !== currentSport) {
+    currentSport = best;
+    document
+      .querySelectorAll(".tab")
+      .forEach((t) => t.classList.toggle("active", t.dataset.sport === best));
+    renderDaily();
+  }
 }
 
 document.addEventListener("DOMContentLoaded", init);

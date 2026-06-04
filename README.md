@@ -54,6 +54,10 @@ python3 -m http.server 8000
 | `styles.css` | styling (pitch-green, retro-ish) |
 | `bluff.js` | phrase data + the bluff engine |
 
+## Roadmap
+
+Ideas and known rough edges live in [`BACKLOG.md`](BACKLOG.md).
+
 ## Disclaimer
 
 For entertainment only. Not affiliated with Channel 4 or *The IT Crowd*. At

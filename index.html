@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BluffBall — sound like you watched the game</title>
+    <meta
+      name="description"
+      content="Your daily guide to football parlance and sports small talk. Open with the classic, nod along, escape cleanly. As seen on The IT Crowd."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="card">
+      <header class="masthead">
+        <div class="logo">
+          <span class="logo-ball">⚽</span>
+          <span class="logo-word">Bluff<b>Ball</b></span>
+        </div>
+        <p class="tagline">Sound like you watched the game.</p>
+      </header>
+
+      <p class="blurb">
+        A list of sports phrases you can use in normal conversation, updated
+        daily. Pick your sport. Open with the classic. Nod along. Escape clean.
+      </p>
+
+      <nav id="tabs" class="tabs" aria-label="Pick a sport"></nav>
+
+      <section class="today">
+        <div class="today-head">
+          <span class="badge">Today's bluff</span>
+          <span id="date" class="date"></span>
+        </div>
+
+        <p class="sport-context">
+          <span id="sport-emoji">⚽</span>
+          <span id="sport-note">(the proper kind, with the round ball)</span>
+        </p>
+
+        <div class="bluff">
+          <div class="step">
+            <span class="step-label">1 · Open with this</span>
+            <p id="opener" class="opener"></p>
+          </div>
+          <div class="step">
+            <span class="step-label">2 · When they reply, nod and say</span>
+            <p id="line" class="line"></p>
+          </div>
+          <div class="step">
+            <span class="step-label">3 · Get out clean</span>
+            <p id="closer" class="closer"></p>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="another" class="btn">🔁 Give me another</button>
+          <button id="panic-btn" class="btn btn-ghost">
+            🆘 They asked a follow-up
+          </button>
+        </div>
+
+        <div id="panic-box" class="panic hidden">
+          <span class="panic-label">Deploy immediately, then change the subject:</span>
+          <p id="panic-line" class="panic-text"></p>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <p>
+          Homage to <i>bluffball.co.uk</i> from
+          <a
+            href="https://en.wikipedia.org/wiki/Are_We_Not_Men%3F_(The_IT_Crowd)"
+            target="_blank"
+            rel="noopener"
+            >The IT Crowd</a
+          >
+          (S03E02, "Are We Not Men?"). Not affiliated with Channel 4 or the
+          show. For entertainment only — at some point you may have to actually
+          watch a game.
+        </p>
+        <p class="oioi">Oi oi.</p>
+      </footer>
+    </main>
+
+    <script src="bluff.js"></script>
+  </body>
+</html>

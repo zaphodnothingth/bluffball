@@ -63,6 +63,25 @@ python3 -m http.server 8000
 
 Ideas and known rough edges live in [`BACKLOG.md`](BACKLOG.md).
 
+## Kindred projects & thanks
+
+This isn't the first recreation, and it stands on the shoulders of others who
+got there first:
+
+- **[The Moss Archives](https://moss-archives.netlify.app/)** — a lovely
+  catalogue of *all* the fictional IT Crowd sites (lonelyfaces.co.uk,
+  howlonghaveyougot.com, friendface.com, and bluffball.co.uk among them). Worth
+  a wander.
+- **[amritatwal/bluffball](https://github.com/amritatwal/bluffball)** — a
+  football-focused Bluffball recreation, with Figma prototypes and a
+  mobile-first build.
+- **[Grathium-Industries/Bluff-Ball](https://github.com/Grathium-Industries/Bluff-Ball)**
+  — another faithful take, deployed on GitHub Pages.
+
+The American-sports angle (NFL/NBA/MLB/NHL, real schedules) is what this one
+adds. And of course, thanks to Graham Linehan and the cast of *The IT Crowd*
+for the joke in the first place.
+
 ## Disclaimer
 
 For entertainment only. Not affiliated with Channel 4 or *The IT Crowd*. At

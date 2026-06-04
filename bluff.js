@@ -51,7 +51,7 @@ const SPORTS = {
       "You can't abandon the run game in the second half like that.",
       "That's on the o-line, honestly — gave him no time in the pocket.",
       "Their red-zone offense has been a problem all year.",
-      "Should've challenged that. Clear loss of possession.",
+      "Should've thrown the challenge flag — he had the ball.",
       "Too many guys trying to make a play instead of doing their job.",
       "You've got to win the turnover battle in a game like that.",
       "Their secondary's been getting torched all season.",
@@ -64,7 +64,7 @@ const SPORTS = {
       "On to next week.",
       "Football's a funny game.",
     ],
-    panic: "The refs swallowed the whistle on that one, though.",
+    panic: "Refs were throwing flags all game, though.",
   },
 
   nba: {
@@ -94,7 +94,7 @@ const SPORTS = {
       "Ball don't lie.",
       "On to the next one.",
     ],
-    panic: "The officiating was inconsistent both ways, though.",
+    panic: "Refs were calling everything tonight, though.",
   },
 
   mlb: {
@@ -124,7 +124,7 @@ const SPORTS = {
       "Anyway. There's a day game tomorrow.",
       "Can't win 'em all.",
     ],
-    panic: "Strike zone was all over the place, though.",
+    panic: "Ump's zone was all over the place, though.",
   },
 
   nhl: {
@@ -138,7 +138,7 @@ const SPORTS = {
     ],
     lines: [
       "They've got to crash the net more.",
-      "You can't take those penalties — too many men in the box.",
+      "Can't be taking those lazy penalties in your own end.",
       "He needs to shoot more from the point.",
       "Their power play has been ice cold.",
       "Get pucks deep and forecheck, that's the whole game.",
@@ -146,7 +146,7 @@ const SPORTS = {
       "They got caught flat-footed on the rush all night.",
       "You've got to win your battles along the boards.",
       "Too many turnovers at the blue line.",
-      "It's a 'puck luck' kind of night, honestly.",
+      "Just one of those puck-luck nights, honestly.",
     ],
     closers: [
       "Anyway. Long road trip ahead.",
@@ -154,7 +154,7 @@ const SPORTS = {
       "On to the next one.",
       "They'll bounce back.",
     ],
-    panic: "Reffing was a joke out there, though.",
+    panic: "Refs put the whistle away out there, though.",
   },
 };
 

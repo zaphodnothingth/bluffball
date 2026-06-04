@@ -3,6 +3,13 @@
 Running list of ideas and known rough edges, roughly in priority order. Nothing
 here is blocking; the site works today. Captured during the 2026-06 review.
 
+## Top priority
+
+- [ ] **Match the original look.** Restyle the site to resemble the real
+      `bluffball.co.uk` as seen in The IT Crowd (S03E02) — its layout, colours,
+      type, and logo — so it reads as a faithful recreation rather than a
+      generic card. Pull screen grabs from the episode as reference.
+
 ## Known limitations / tech debt
 
 - [ ] **Session cache never expires.** `rawCache` / `sportDataCache` live for the
